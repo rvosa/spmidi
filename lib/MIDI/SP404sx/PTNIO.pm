@@ -1,4 +1,4 @@
-package MIDI::SP404sx::BinaryUtils;
+package MIDI::SP404sx::PTNIO;
 use strict;
 use warnings;
 use Data::Dumper;
@@ -67,7 +67,7 @@ sub next_sample {
     my ( $pos, $n ) = @_;
     DEBUG "next: $pos";
 
-    # Specifies the number of ticks untill the next sample in the pattern should be triggered. For samples played
+    # Specifies the number of ticks until the next sample in the pattern should be triggered. For samples played
     # simultaneously all but one have a Next Sample value of 0, play the next sample 0 ticks after the current
     # sample. All 4 samples in the example pattern have a Next Note value of 0x60 which is the hex value that
     # represents a quarter bar. 384 / 4 = 96 or 0x60.

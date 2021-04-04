@@ -2,7 +2,7 @@
 use strict;
 use warnings FATAL => 'all';
 use Getopt::Long;
-use MIDI::SP404sx::BinaryUtils;
+use MIDI::SP404sx::PTNIO;
 
 # process command line arguments
 my ( $infile, $outfile, $blink, $channel );
@@ -13,5 +13,5 @@ GetOptions(
     'channel=i' => \$channel,
 );
 
-my @hex = MIDI::SP404sx::BinaryUtils::read_bin($infile);
-MIDI::SP404sx::BinaryUtils::decode_hex(@hex);
+my @hex = MIDI::SP404sx::PTNIO::read_bin($infile);
+MIDI::SP404sx::PTNIO::decode_hex(@hex);
