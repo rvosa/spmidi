@@ -91,7 +91,7 @@ sub pad_code {
 
     # pitch mapped back to MIDI note nr, reporting bank and pad in log
     $n->pitch( $pad + $MIDI::SP404sx::Constants::pad_offset_magic_number );
-    DEBUG "bank: $bank pad: $pad";
+    INFO "$real_code bank: $bank pad: $pad";
 }
 
 sub bank_switch {
