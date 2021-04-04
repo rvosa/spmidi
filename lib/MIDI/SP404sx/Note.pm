@@ -40,6 +40,7 @@ sub pattern {
         my $val = shift;
         if ( UNIVERSAL::isa( $val, 'MIDI::SP404sx::Pattern') ) {
             $self->{pattern} = $val;
+            $self->{pattern}->notes( $self );
         }
         else {
             die $val;
