@@ -32,4 +32,15 @@ sub nlength {
     return $self->{nlength};
 }
 
+sub notes {
+    my $self = shift;
+    $self->{notes} = [] if not $self->{notes};
+    if ( @_ ) {
+        for my $val ( @_ ) {
+            push @{ $self->{notes} }, $val;
+        }
+    }
+    return @{ $self->{notes} };
+}
+
 1;
