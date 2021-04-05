@@ -7,7 +7,7 @@ use MIDI::SP404sx::Pattern;
 use MIDI::SP404sx::Constants;
 use Log::Log4perl qw(:easy);
 
-Log::Log4perl->easy_init($INFO);
+Log::Log4perl->easy_init($DEBUG);
 
 my $BLOCK_SIZE=1024;
 
@@ -22,11 +22,11 @@ sub read_bin {
     while( read( $fh, $buf, $BLOCK_SIZE, $offset * $BLOCK_SIZE ) ){
 	    for( split( //, $buf ) ) {
             my $hex = ord( $_ );
-		    # printf( "0x%02x ", $hex );
-            # $i++;
-            # unless ( $i % 8 ) {
-            #     print "\n";
-            # }
+		    printf( "0x%02x ", $hex );
+            $i++;
+            unless ( $i % 8 ) {
+                print "\n";
+            }
             push @result, $hex;
 	    }
 	    $offset++;
@@ -44,23 +44,31 @@ sub decode_hex {
         \&noop,
         \&velocity,
         \&noop,
-        \&noop,
         \&nlength,
     );
-    my $i = 0;
-    my $p = MIDI::SP404sx::Pattern->new();
+    my $i = 0; # iterates over handlers in @map
+    my $p = MIDI::SP404sx::Pattern->new( nlength => $hex[-7] );
     my $n = MIDI::SP404sx::Note->new( pattern => $p );
-    for my $h ( @hex ) {
-        $map[$i]->($h,$n);
+    for my $j ( 0 .. ( $#hex - 16 ) ) {
+
+        # dispatch two byte handler for length, otherwise one byte handler
+        if ( $i == 6 ) {
+            $map[$i]->( @hex[ $j, $j+1 ], $n );
+        }
+        elsif ( $i < 6 ) {
+            $map[$i]->( $hex[$j], $n );
+        }
+
+        # increment index of byte handler or instantiate new round
         if ( $i < 7 ) {
             $i++;
         }
         else {
-            INFO Dumper($n);
             $i = 0;
             $n = MIDI::SP404sx::Note->new( pattern => $p );
         }
     }
+    return $p;
 }
 
 sub next_sample {
@@ -77,31 +85,21 @@ sub next_sample {
 # used to translate
 sub pad_code {
     my ( $hex_code, $n ) = @_;
-    my $ppb = $MIDI::SP404sx::Constants::pads_per_bank;
-    my $real_code = $hex_code - $MIDI::SP404sx::Constants::pad_offset_magic_number;
-    my $pad = $real_code % $ppb;
-    my $bank = ( $real_code - $pad ) / $ppb;
-    if ( $bank > $MIDI::SP404sx::Constants::secondary_bank_offset ) {
-        $bank = ( $real_code - $pad ) / ( $ppb * 2 );
-    }
-    if ( $pad == 0 ) {
-        $pad = 12;
-        $bank--;
-    }
+    DEBUG "pitch $hex_code";
 
-    # pitch mapped back to MIDI note nr, reporting bank and pad in log
-    $n->pitch( $pad + $MIDI::SP404sx::Constants::pad_offset_magic_number );
-    INFO "$real_code bank: $bank pad: $pad";
+    # pitch maps to MIDI note nr
+    $n->pitch( $hex_code );
 }
 
 sub bank_switch {
     my ( $bank, $n ) = @_;
     DEBUG "switch: $bank";
 
-    # 0 means base bank, otherwise upper/blinking
-    my $sw = $bank ? !!$bank : 0;
-    $n->channel( $sw );
+    if ( $bank == 65 ) {
+        $n->channel( $n->channel + 1 );
+    }
 }
+
 sub velocity {
     my ( $velocity, $n ) = @_;
     DEBUG "velocity: $velocity";
@@ -111,10 +109,11 @@ sub velocity {
 }
 
 sub nlength {
-    my ( $length, $n ) = @_;
-    DEBUG "length: $length";
+    my ( $b1, $b2, $n ) = @_;
+    my $l = sprintf('0x%02x%02x', $b1, $b2);
+    DEBUG "length: $b1 $b2 $l";
 
-    $n->nlength( $length );
+    $n->nlength( hex($l) );
 }
 
 sub noop {}

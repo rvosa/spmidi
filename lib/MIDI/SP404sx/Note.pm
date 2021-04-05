@@ -3,6 +3,9 @@ use strict;
 use warnings;
 use MIDI::SP404sx::Constants;
 use base 'MIDI::SP404sx';
+use Log::Log4perl qw(:easy);
+
+Log::Log4perl->easy_init($INFO);
 
 sub velocity {
     my $self = shift;
@@ -71,9 +74,10 @@ sub pitch {
         my $val = int(shift);
         if ( $val >= 0 && $val <= $MIDI::SP404sx::Constants::max_note ) {
             $self->{pitch} = $val;
+            DEBUG "setting midi note value to $val";
         }
         else {
-            die $val;
+            DEBUG "note value out of range $val";
         }
     }
     return $self->{pitch};
@@ -89,8 +93,8 @@ sub channel {
         else {
             die $val;
         }
-        return $self->{channel};
     }
+    return $self->{channel} || 1;
 }
 
 1;

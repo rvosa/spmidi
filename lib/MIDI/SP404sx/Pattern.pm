@@ -3,6 +3,9 @@ use strict;
 use warnings;
 use MIDI::SP404sx::Constants;
 use base 'MIDI::SP404sx';
+use Log::Log4perl qw(:easy);
+
+Log::Log4perl->easy_init($INFO);
 
 sub tempo {
     my $self = shift;
@@ -23,6 +26,7 @@ sub nlength {
     if ( @_ ) {
         my $val = shift;
         if ( $val >= $MIDI::SP404sx::Constants::min_length && $val <= $MIDI::SP404sx::Constants::max_length ) {
+            INFO "nlength: $val";
             $self->{nlength} = $val;
         }
         else {
