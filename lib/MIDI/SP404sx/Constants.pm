@@ -17,6 +17,7 @@ our $min_bpm = 40;
 our $max_bpm = 200;
 our $min_length = 1;
 our $max_length = 99;
+our $PPQ = 96;
 our $path_to_samples = "./SP-404SX/SMPL/";
 our $length_encoding = "008C000000000000\n00{}000000000000";
 
