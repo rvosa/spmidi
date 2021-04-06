@@ -29,6 +29,7 @@ sub nlength {
         # XXX compute allowable max length to check, use pattern object
         if ( $val >= 0 ) {
             $self->{nlength} = $val;
+            DEBUG "setting note length to $val";
         }
         else {
             die $val;
@@ -60,6 +61,7 @@ sub position {
         # XXX compute allowable position, use pattern object
         if ( $val >= 0 ) {
             $self->{position} = $val;
+            DEBUG "setting event position to $val";
         }
         else {
             die $val;
