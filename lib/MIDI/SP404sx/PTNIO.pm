@@ -10,6 +10,7 @@ use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($DEBUG);
 
 my $BLOCK_SIZE=1024;
+my $Position=0;
 
 sub read_bin {
     my $file = shift;
@@ -32,7 +33,7 @@ sub read_bin {
 	    $offset++;
     }
     close( $fh );
-    return @result;
+    return decode_hex(@result);
 }
 
 sub decode_hex {
@@ -46,6 +47,7 @@ sub decode_hex {
         \&noop,
         \&nlength,
     );
+    $Position = 0;
     my $i = 0; # iterates over handlers in @map
     my $p = MIDI::SP404sx::Pattern->new( nlength => $hex[-7] );
     my $n = MIDI::SP404sx::Note->new( pattern => $p );
@@ -79,7 +81,8 @@ sub next_sample {
     # simultaneously all but one have a Next Sample value of 0, play the next sample 0 ticks after the current
     # sample. All 4 samples in the example pattern have a Next Note value of 0x60 which is the hex value that
     # represents a quarter bar. 384 / 4 = 96 or 0x60.
-    $n->position($pos);
+    $n->position( $Position / $MIDI::SP404sx::Constants::PPQ );
+    $Position += $pos;
 }
 
 # used to translate
@@ -113,13 +116,16 @@ sub nlength {
     my $l = sprintf('0x%02x%02x', $b1, $b2);
     DEBUG "length: $b1 $b2 $l";
 
-    $n->nlength( hex($l) );
+    $n->nlength( hex($l) / $MIDI::SP404sx::Constants::PPQ );
 }
 
 sub noop {}
 
 sub write_bin {
-
+    my ( $pattern, $outfile ) = @_;
+    open my $out, '>:raw', $outfile or die "Unable to open: $!";
+    print $out pack('s<', 255);
+    close $out;
 }
 
 1;
