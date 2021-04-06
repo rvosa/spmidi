@@ -13,5 +13,4 @@ GetOptions(
     'channel=i' => \$channel,
 );
 
-my @hex = MIDI::SP404sx::PTNIO::read_bin($infile);
-MIDI::SP404sx::PTNIO::decode_hex(@hex);
+my $pattern = MIDI::SP404sx::PTNIO::read_bin($infile);
