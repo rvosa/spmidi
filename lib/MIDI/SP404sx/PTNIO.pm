@@ -67,10 +67,54 @@ sub decode {
     return $pattern;
 }
 
+#- next_sample
+#- pad_code
+#- bank_switch
+#- unknown1
+#- velocity
+#- unknown2
+#- length (note: 2 bytes)
+
 sub write_bin {
     my ( $pattern, $outfile ) = @_;
     open my $out, '>:raw', $outfile or die "Unable to open: $!";
-    print $out pack('s<', 255);
+    my $writer = sub { print $out pack('C', shift ) };
+    my @notes = sort { $a->position <=> $b->position } $pattern->notes;
+    for my $i ( 0 .. $#notes ) {
+        my $n = $notes[$i];
+
+        # generate spacers
+        my ( $next_sample, @spacers );
+        if ( my $o = $notes[$i+1] ) {
+            $next_sample = int( ( $o->position - $n->position ) * $MIDI::SP404sx::Constants::PPQ );
+            while ( $next_sample > 255 ) {
+                push @spacers, [ 255, 128, 0, 0, 0, 0 ];
+                $next_sample -= 255;
+            }
+        }
+
+        # write focal note
+        $writer->( $next_sample );         # next_sample
+        $writer->( $n->pitch );            # pad_code
+        $writer->( $n->channel ? 64 : 0 ); # bank_switch
+        $writer->( 0 );                    # unknown1
+        $writer->( $n->velocity );         # velocity
+        $writer->( 64 );                   # unknown2
+        print $out pack('S>', int( $n->nlength * $MIDI::SP404sx::Constants::PPQ ) ); # length as long
+
+        # write spacers
+        for my $s ( @spacers ) {
+            $writer->($_) for @$s;
+            print $out pack('S>', 255);
+        }
+    }
+
+    # write footer
+    $writer->($_) for ( 0, 140, 0, 0, 0, 0 );
+    print $out pack('S>', 0);
+    $writer->($_) for ( 0, $pattern->nlength, 0, 0, 0, 0 );
+    print $out pack('S>', 0);
+
     close $out;
 }
 
