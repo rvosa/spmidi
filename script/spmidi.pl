@@ -20,7 +20,7 @@ my ( $reader, $writer );
 if ( $infile =~ /\.mid$/i ) {
     $reader = 'MIDI::SP404sx::MIDIIO';
 }
-elsif ( $infile =~ /\.PTN/i ) {
+elsif ( $infile =~ /\.BIN/i ) {
     $reader = 'MIDI::SP404sx::PTNIO';
 }
 else {
@@ -28,7 +28,7 @@ else {
 }
 
 # determine the output
-if ( $outfile =~ /\.PTN$/i ) {
+if ( $outfile =~ /\.BIN$/i ) {
     $writer = 'MIDI::SP404sx::PTNIO';
 }
 elsif ( $outfile =~ /\.mid$/i ) {
