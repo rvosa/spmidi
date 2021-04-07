@@ -13,7 +13,8 @@ my $channel  = 2;
 my $note     = 3;
 my $velocity = 4;
 
-sub read_midi {
+sub read_pattern {
+    my $class = shift;
     my $file = shift;
     my $opus = MIDI::Opus->new({ from_file => $file });
     #print Dumper($opus);
@@ -62,7 +63,8 @@ sub decode_events {
     return $pattern;
 }
 
-sub write_midi {
+sub write_pattern {
+    my $class = shift;
     my ( $pattern, $file ) = @_;
     my $ppqn = $MIDI::SP404sx::Constants::PPQ;
     my $opus = MIDI::Opus->new({ format => 1, ticks => $ppqn });

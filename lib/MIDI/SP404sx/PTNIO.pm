@@ -9,7 +9,8 @@ use Log::Log4perl qw(:easy);
 
 my $BLOCK_SIZE=1024;
 
-sub read_bin {
+sub read_pattern {
+    my $class = shift;
     my $file = shift;
     open my $fh, '<', $file or die $!;
     binmode($fh);
@@ -75,7 +76,8 @@ sub decode {
 #- unknown2
 #- length (note: 2 bytes)
 
-sub write_bin {
+sub write_pattern {
+    my $class = shift;
     my ( $pattern, $outfile ) = @_;
     open my $out, '>:raw', $outfile or die "Unable to open: $!";
     my $writer = sub { print $out pack('C', shift ) };
