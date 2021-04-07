@@ -99,7 +99,7 @@ sub channel {
             ERROR "midi note channel out of range: $val";
         }
     }
-    return $self->{channel} || 1;
+    return $self->{channel};
 }
 
 1;
