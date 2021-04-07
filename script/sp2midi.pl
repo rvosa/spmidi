@@ -2,15 +2,16 @@
 use strict;
 use warnings FATAL => 'all';
 use Getopt::Long;
+use Data::Dumper;
 use MIDI::SP404sx::PTNIO;
 
 # process command line arguments
-my ( $infile, $outfile, $blink, $channel );
+my ( $infile, $outfile );
 GetOptions(
     'infile=s'  => \$infile,
     'outfile=s' => \$outfile,
-    'blink'     => \$blink,
-    'channel=i' => \$channel,
 );
 
 my $pattern = MIDI::SP404sx::PTNIO::read_bin($infile);
+
+print Dumper( $pattern );

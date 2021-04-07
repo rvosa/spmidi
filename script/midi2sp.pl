@@ -2,15 +2,16 @@
 use strict;
 use warnings FATAL => 'all';
 use Getopt::Long;
+use Data::Dumper;
 use MIDI::SP404sx::MIDIIO;
 
 # process command line arguments
-my ( $infile, $outfile, $blink, $channel );
+my ( $infile, $outfile );
 GetOptions(
     'infile=s'  => \$infile,
     'outfile=s' => \$outfile,
-    'blink'     => \$blink,
-    'channel=i' => \$channel,
 );
 
 my $pattern = MIDI::SP404sx::MIDIIO::read_midi($infile);
+
+MIDI::SP404sx::MIDIIO::write_midi($pattern,$outfile);
