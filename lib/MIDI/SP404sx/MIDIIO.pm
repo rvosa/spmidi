@@ -28,10 +28,7 @@ sub decode_events {
         my %seen;
         my $position = 0;
         EVENT: for my $e ( $track->events ) {
-            next EVENT unless $e->[$type] =~ /(note|set_tempo)/;
-            if ( $e->[$type] eq 'set_tempo' ) {
-                next EVENT;
-            }
+            next EVENT unless $e->[$type] =~ /note_/;
             $position += $e->[$dtime];
             my $t  = $position / $opus->ticks;
             my $n  = $e->[$note];
