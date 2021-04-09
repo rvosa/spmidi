@@ -63,47 +63,50 @@ sub decode_events {
     return $pattern;
 }
 
+# Time attached to every event in a MIDI file is an offset from the previous event.
+# This offset is called delta-time. This is stored in slot $dtime of every event
+# we deal with (i.e. note_on, note_off and track_name).
+
 sub write_pattern {
     my $class = shift;
     my ( $pattern, $file ) = @_;
     my $ppqn = $MIDI::SP404sx::Constants::PPQ;
     my $opus = MIDI::Opus->new({ format => 1, ticks => $ppqn });
     my @tracks;
-    for my $c ( sort { $a <=> $b } keys %{{ map { $_->channel => 1 } $pattern->notes }}) {
-        my ( $track, $position, @offs ) = ( MIDI::Track->new, 0 );
+
+    # iterate over distinct channels sorted ascending
+    for my $c ( sort { $a <=> $b } keys %{{ map { $_->channel => 1 } $pattern->notes }} ) {
+
+        # instantiate events array with track label for base or upper channel (=SP404sx bank group)
         my @events = ( [ 'track_name', 0, scalar(@tracks) == 0 ? 'Base channel' : 'Upper channel' ] );
+
+        # iterate over notes in this channel chronologically, make note-on and note-off events
+        my @notes;
         for my $n ( sort { $a->position <=> $b->position } grep { $_->channel == $c } $pattern->notes ) {
-
-            # resolve any dangling note-off events
-            my @noffs;
-            for my $o ( sort { $a->{position} <=> $b->{position} } @offs ) {
-                if ( $o->{position} <= $n->position ) {
-                    $o->{event}->[$dtime] = int( ( $o->{position} - $position ) * $ppqn );
-                    $position = $o->{position};
-                    push @events, $o->{event};
-                }
-                else {
-                    push @noffs, $o;
-                }
-            }
-            @offs = @noffs;
-
-            # create and insert note on
-            my $delta_t = int( ( $n->position - $position ) * $ppqn );
-            my @on = ( 'note_on', $delta_t, $n->channel, $n->pitch, $n->velocity );
-            push @events, \@on;
-
-            # queue dangling note-off event
-            my @off = @on;
-            $off[$type] = 'note_off';
-            push @offs, { position => $n->position + $n->nlength, event => \@off };
+            my $noff_pos = $n->position + $n->nlength;
+            push @notes, [ 'note_on', $n->position, $n->channel, $n->pitch, $n->velocity ];
+            push @notes, [ 'note_off', $noff_pos,   $n->channel, $n->pitch, $n->velocity ];
         }
+        @notes = sort { $a->[$dtime] <=> $b->[$dtime] } @notes;
+
+        # compute delta times in quarter notes
+        for ( my $i = $#notes; $i >= 1; $i-- ) {
+            $notes[$i]->[$dtime] -= $notes[$i-1]->[$dtime];
+        }
+
+        # compute delta times in pulses and add to events
+        for my $n ( @notes ) {
+            $n->[$dtime] = sprintf( "%.0f", $n->[$dtime] * $ppqn );
+            push @events, $n;
+        }
+
+        # create and populate track
+        my $track = MIDI::Track->new;
         $track->events(@events);
         push @tracks, $track;
     }
-    $opus->tracks(@tracks);
-    #print Dumper($opus);
-    $opus->write_to_file($file);
+    $opus->tracks( @tracks );
+    $opus->write_to_file( $file );
 }
 
 1;
