@@ -2,8 +2,10 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Data::Dumper;
 use MIDI::SP404sx::PTNIO;
 use MIDI::SP404sx::MIDIIO;
+use Log::Log4perl qw(:easy);
 
 # process command line arguments
 my ( $infile, $outfile, $verbosity );
@@ -12,6 +14,12 @@ GetOptions(
     'outfile=s' => \$outfile,
     'verbose+'  => \$verbosity,
 );
+
+# configure logger
+if ( $verbosity ) {
+    my $log_level = ( 3 - $verbosity ) * 10000;
+    Log::Log4perl->easy_init($log_level);
+}
 
 # will be input and output classes
 my ( $reader, $writer );
@@ -39,7 +47,5 @@ else {
 }
 
 # do the conversion
-$writer->write_pattern(
-    $reader->read_pattern($infile),
-    $outfile
-);
+my $pattern = $reader->read_pattern($infile);
+$writer->write_pattern($pattern, $outfile);
