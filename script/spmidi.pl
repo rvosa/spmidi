@@ -8,11 +8,12 @@ use MIDI::SP404sx::MIDIIO;
 use Log::Log4perl qw(:easy);
 
 # process command line arguments
-my ( $infile, $outfile, $verbosity );
+my ( $infile, $outfile, $verbosity, $length );
 GetOptions(
     'infile=s'  => \$infile,
     'outfile=s' => \$outfile,
     'verbose+'  => \$verbosity,
+    'length=i'  => \$length, # length in bars, e.g. 4/4 = *1* bar, only for reading MIDI
 );
 
 # configure logger
@@ -48,4 +49,7 @@ else {
 
 # do the conversion
 my $pattern = $reader->read_pattern($infile);
+if ( $length ) {
+    $pattern->nlength($length);
+}
 $writer->write_pattern($pattern, $outfile);
