@@ -49,11 +49,12 @@ sub decode {
     my @ints = @_;
     my ( $next, $pad, $bank, $velocity, $isnote, $length ) = ( 0, 1, 2, 4, 5, 6);
     my $pattern  = MIDI::SP404sx::Pattern->new( nlength => $ints[-7] );
+    my $ppqn     = $MIDI::SP404sx::Constants::PPQ;
     my $position = 0;
     for ( my $i = 0; $i <= ( $#ints - 16 ); $i += 8 ) {
         if ( $ints[$isnote+$i] ) {
             my $channel = $ints[$bank+$i] ? 1 : 0;
-            my $nlength = hex(sprintf('0x%02x%02x',$ints[$length+$i],$ints[$length+$i+1]))/$MIDI::SP404sx::Constants::PPQ;
+            my $nlength = hex( sprintf('0x%02x%02x', $ints[$length+$i], $ints[$length+$i+1] ) ) / $ppqn;
             MIDI::SP404sx::Note->new(
                 pitch    => $ints[$pad+$i],
                 velocity => $ints[$velocity+$i],
@@ -63,7 +64,7 @@ sub decode {
                 position => $position / $MIDI::SP404sx::Constants::PPQ,
             );
         }
-        $position += $ints[$next];
+        $position += $ints[$next+$i];
     }
     return $pattern;
 }
@@ -79,45 +80,79 @@ sub decode {
 sub write_pattern {
     my $class = shift;
     my ( $pattern, $outfile ) = @_;
+    my $ppqn = $MIDI::SP404sx::Constants::PPQ;
     open my $out, '>:raw', $outfile or die "Unable to open: $!";
-    my $writer = sub { print $out pack('C', shift ) };
     my @notes = sort { $a->position <=> $b->position } $pattern->notes;
     for my $i ( 0 .. $#notes ) {
         my $n = $notes[$i];
 
-        # generate spacers
+        # generate spacers from start to first note
+        if ( $i == 0 and $n->position != 0 ) {
+            my ( $remainder, @spacers );
+            ( $remainder, @spacers ) = _make_spacers( sprintf( "%.0f", ( $n->position * $ppqn ) ) );
+            push @spacers, [ $remainder, 128, 0, 0, 0, 0, 0 ];
+            _write_event( $out, @$_ ) for @spacers;
+        }
+
+        # generate spacers to next note or pattern end
         my ( $next_sample, @spacers );
         if ( my $o = $notes[$i+1] ) {
-            $next_sample = int( ( $o->position - $n->position ) * $MIDI::SP404sx::Constants::PPQ );
-            while ( $next_sample > 255 ) {
-                push @spacers, [ 255, 128, 0, 0, 0, 0 ];
-                $next_sample -= 255;
-            }
+            my $raw = ( $o->position - $n->position ) * $ppqn;
+            $next_sample = sprintf( "%.0f", $raw );
         }
+        else {
+            my $raw = ( ( $pattern->nlength * 4 ) - $n->position ) * $ppqn;
+            $next_sample = sprintf( "%.0f", $raw );
+        }
+        ( $next_sample, @spacers ) = _make_spacers($next_sample);
 
         # write focal note
-        $writer->( $next_sample );         # next_sample
-        $writer->( $n->pitch );            # pad_code
-        $writer->( $n->channel ? 64 : 0 ); # bank_switch
-        $writer->( 0 );                    # unknown1
-        $writer->( $n->velocity );         # velocity
-        $writer->( 64 );                   # unknown2
-        print $out pack('S>', int( $n->nlength * $MIDI::SP404sx::Constants::PPQ ) ); # length as long
+        _write_note( $out, $n, $next_sample );
 
         # write spacers
-        for my $s ( @spacers ) {
-            $writer->($_) for @$s;
-            print $out pack('S>', 255);
-        }
+        _write_event( $out, @$_ ) for @spacers;
     }
 
     # write footer
-    $writer->($_) for ( 0, 140, 0, 0, 0, 0 );
-    print $out pack('S>', 0);
-    $writer->($_) for ( 0, $pattern->nlength, 0, 0, 0, 0 );
-    print $out pack('S>', 0);
+    _write_event( $out, 0, 140,               0, 0, 0, 0, 0 );
+    _write_event( $out, 0, $pattern->nlength, 0, 0, 0, 0, 0 );
 
     close $out;
+}
+
+sub _make_spacers {
+    my $interval = shift;
+    my @spacers;
+    while( $interval > 255 ) {
+        push @spacers, [ 255, 128, 0, 0, 0, 0, 0 ];
+        $interval -= 255;
+    }
+    return $interval, @spacers;
+}
+
+sub _write_note {
+    my ( $out, $n, $next ) = @_;
+    my @fields;
+    push @fields, $next;
+    push @fields, $n->pitch;
+    push @fields, ( $n->channel ? 64 : 0 );
+    push @fields, 0;
+    push @fields, $n->velocity;
+    push @fields, 64;
+    push @fields, sprintf( "%.0f", ( $n->nlength * $MIDI::SP404sx::Constants::PPQ ) );
+    _write_event( $out, @fields );
+}
+
+sub _write_event {
+    my ( $out, @fields ) = @_;
+    for my $i ( 0 .. $#fields ) {
+        if ( $i < $#fields ) {
+            print $out pack( 'C', $fields[$i] );
+        }
+        else {
+            print $out pack( 'S>', $fields[$i] );
+        }
+    }
 }
 
 1;
