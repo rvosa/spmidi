@@ -9,5 +9,6 @@ WriteMakefile(
     VERSION_FROM  => 'lib/MIDI/SP404sx.pm',
     ABSTRACT      => 'Convert between MIDI files and SP404sx patterns',
     PREREQ_PM     => { 'MIDI::Perl' => 0, 'Log::Log4perl' => 0 },
+    EXE_FILES     => [ 'script/spmidi' ],
     dist          => { COMPRESS => 'gzip -6f', SUFFIX => 'gz', },
 );
